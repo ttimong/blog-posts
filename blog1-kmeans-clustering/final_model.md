@@ -3,10 +3,10 @@
 ```python
 import pandas as pd
 import numpy as np
-import datetime 
-from dateutil.relativedelta import relativedelta
 import matplotlib.pyplot as plt
 import seaborn as sns
+import datetime 
+from dateutil.relativedelta import relativedelta
 
 %matplotlib inline 
 
@@ -14,11 +14,20 @@ pd.set_option('display.max_columns', 100)
 ```
 
 # Introduction
+I have recently gone back for an In-Camp Training (military service) and was catching up with a few of my army buddies. The most common topic that we were talking about was on investments. All of us are chasing the dream of creating a source of passive income, to attain financial freedom. Many of them were sharing their own investment strategies and insights to stocks that they have purchased. This was running through my mind at that point in time:
+
+**_“Out of the hundreds and thousands of stocks that are available, how can I better narrow down to a handful of stocks that suits my risk appetite and have better than average returns, to do my due diligence on?”_**
+ 
+I shall attempt to use K-Means clustering algorithm to answer this question. 
+
+To narrow down my scope, I would be using stocks listed on NASDAQ and NYSE.
+
+## Data Transformation
 
 
 ```python
-# 2006 - 2017 raw data is taken from Stocker package which uses Quandl API
-raw_data = pd.read_csv('./2012_2017_data.csv', index_col=0)
+# 2006 - 2017 raw data is taken from Stocker python package which pulls from Quandl API
+raw_data = pd.read_csv('./agg_df2_2012_onwards.csv', index_col=0)
 ```
 
     C:\Users\timothy.ong\AppData\Local\Continuum\anaconda3\lib\site-packages\numpy\lib\arraysetops.py:522: FutureWarning: elementwise comparison failed; returning scalar instead, but in the future will perform elementwise comparison
@@ -51,85 +60,37 @@ raw_data.head(3)
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>date</th>
-      <th>open</th>
-      <th>high</th>
-      <th>low</th>
-      <th>close</th>
-      <th>volume</th>
-      <th>ex-dividend</th>
-      <th>split ratio</th>
-      <th>adj. open</th>
-      <th>adj. high</th>
-      <th>adj. low</th>
-      <th>adj. close</th>
-      <th>adj. volume</th>
-      <th>ds</th>
-      <th>y</th>
-      <th>daily change</th>
       <th>ticker</th>
+      <th>date</th>
+      <th>year</th>
+      <th>open</th>
+      <th>close</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <th>0</th>
-      <td>1998-05-20</td>
-      <td>15.25</td>
-      <td>15.25</td>
-      <td>15.00</td>
-      <td>15.00</td>
-      <td>21867.0</td>
-      <td>0.0</td>
-      <td>1.0</td>
-      <td>7.932029</td>
-      <td>7.932029</td>
-      <td>7.801996</td>
-      <td>7.801996</td>
-      <td>32800.5</td>
-      <td>1998-05-20</td>
-      <td>7.801996</td>
-      <td>-0.130033</td>
+      <th>3428</th>
       <td>MCBC</td>
+      <td>2012-01-03</td>
+      <td>2012</td>
+      <td>2.28</td>
+      <td>2.26</td>
     </tr>
     <tr>
-      <th>1</th>
-      <td>1998-05-21</td>
-      <td>15.25</td>
-      <td>15.25</td>
-      <td>14.88</td>
-      <td>15.00</td>
-      <td>23133.0</td>
-      <td>0.0</td>
-      <td>1.0</td>
-      <td>7.932029</td>
-      <td>7.932029</td>
-      <td>7.739580</td>
-      <td>7.801996</td>
-      <td>34699.5</td>
-      <td>1998-05-21</td>
-      <td>7.801996</td>
-      <td>-0.130033</td>
+      <th>3429</th>
       <td>MCBC</td>
+      <td>2012-01-04</td>
+      <td>2012</td>
+      <td>2.22</td>
+      <td>2.26</td>
     </tr>
     <tr>
-      <th>2</th>
-      <td>1998-05-22</td>
-      <td>15.00</td>
-      <td>15.25</td>
-      <td>15.00</td>
-      <td>15.19</td>
-      <td>1467.0</td>
-      <td>0.0</td>
-      <td>1.0</td>
-      <td>7.801996</td>
-      <td>7.932029</td>
-      <td>7.801996</td>
-      <td>7.900821</td>
-      <td>2200.5</td>
-      <td>1998-05-22</td>
-      <td>7.900821</td>
-      <td>0.098825</td>
+      <th>3430</th>
       <td>MCBC</td>
+      <td>2012-01-05</td>
+      <td>2012</td>
+      <td>2.26</td>
+      <td>2.24</td>
     </tr>
   </tbody>
 </table>
@@ -221,7 +182,7 @@ df_2018.head(3)
 
 
 ```python
-# narrowing data set to 2012 - 2017
+# narrowing dataset to 2012 - 2017
 # creating new column `year`
 df_2012_2017 = (
     raw_data
@@ -231,9 +192,11 @@ df_2012_2017 = (
 )
 ```
 
+`df_2012_2017` dataset provides the data for each stock performance on a daily basis, during the stated time period. I would like to obtain the annual performance of each stock. As such, I would need to identify the first and last trading day for each year.
+
 
 ```python
-# getting the first day and last day of each year that is available in the data set
+# getting the first day and last day of each year that is available in the dataset
 first_date_list = [df_2012_2017.query("year == '{}'".format(2012+i)).date.min() for i in range(6)]
 last_date_list = [df_2012_2017.query("year == '{}'".format(2012+i)).date.max() for i in range(6)]
 first_date_df =pd.DataFrame({"date": first_date_list}) 
@@ -386,21 +349,21 @@ agg_df3.head(3)
   <tbody>
     <tr>
       <th>0</th>
-      <td>A</td>
-      <td>0.110970</td>
-      <td>0.060594</td>
-    </tr>
-    <tr>
-      <th>1</th>
       <td>AAN</td>
       <td>0.080143</td>
       <td>0.048170</td>
     </tr>
     <tr>
-      <th>2</th>
+      <th>1</th>
       <td>AAON</td>
       <td>0.100059</td>
       <td>0.079516</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>AAP</td>
+      <td>0.165665</td>
+      <td>0.124715</td>
     </tr>
   </tbody>
 </table>
@@ -414,18 +377,22 @@ agg_df3.info()
 ```
 
     <class 'pandas.core.frame.DataFrame'>
-    Int64Index: 1225 entries, 0 to 1224
+    Int64Index: 1300 entries, 0 to 1299
     Data columns (total 3 columns):
-    ticker                1225 non-null object
-    avg_yearly_returns    1225 non-null float64
-    variance              1225 non-null float64
+    ticker                1300 non-null object
+    avg_yearly_returns    1300 non-null float64
+    variance              1300 non-null float64
     dtypes: float64(2), object(1)
-    memory usage: 38.3+ KB
+    memory usage: 40.6+ KB
     
+
+1300 stocks will be used for this study.
+
+### Modelling
 
 
 ```python
-from sklearn.preprocessing import RobustScaler, MinMaxScaler, StandardScaler
+from sklearn.preprocessing import RobustScaler
 from sklearn.cluster import KMeans
 from sklearn import metrics
 ```
@@ -480,10 +447,10 @@ plot_cluster(agg_df3, max_loop=25)
 ```
 
 
-![png](final_model_files/final_model_16_0.png)
+![png](final_model-Copy1_files/final_model-Copy1_20_0.png)
 
 
-From the first graph, `Within Cluster SSE After K-Means Clustering`, we can see that as the number of clusters increase pass 7, the sum of square of errors within clusters plateaus off. From the second graph, `Silhouette Score After K-Means Clustering`, we can see that there are various parts of the graph where a kink can be seen. Since there is not much a difference in SSE after 7 clusters and that the drop in sihouette score is quite significant between 13 clusters and 14 clusters, I would use 13 clusters in my K-Means model below.
+From the first graph, `Within Cluster SSE After K-Means Clustering`, we can see that as the number of clusters increase pass 7, the sum of square of errors within clusters plateaus off. From the second graph, `Silhouette Score After K-Means Clustering`, we can see that there are various parts of the graph where a kink can be seen. Since there is not much a difference in SSE after 7 clusters and that the drop in sihouette score is quite significant between 14 clusters and 15 clusters, I would use 14 clusters in my K-Means model below.
 
 
 ```python
@@ -514,13 +481,13 @@ def apply_cluster(df, clusters=2):
 
 
 ```python
-first_trial = apply_cluster(agg_df3, clusters=13)
+first_trial = apply_cluster(agg_df3, clusters=14)
 ```
 
     clustering performance
     -----------------------------------
     silhouette score: 0.78
-    sse withing cluster: 3014.0
+    sse withing cluster: 3237.0
     
 
 
@@ -567,51 +534,51 @@ cluster_perf_df
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>0.092591</td>
-      <td>0.110720</td>
-      <td>1123</td>
+      <td>0.092419</td>
+      <td>0.110761</td>
+      <td>1193</td>
     </tr>
     <tr>
       <th>1</th>
       <td>11</td>
-      <td>0.345083</td>
-      <td>1.023035</td>
-      <td>57</td>
+      <td>0.336065</td>
+      <td>1.018290</td>
+      <td>59</td>
     </tr>
     <tr>
       <th>2</th>
       <td>8</td>
-      <td>0.546022</td>
-      <td>2.863663</td>
-      <td>21</td>
+      <td>0.593508</td>
+      <td>2.854767</td>
+      <td>19</td>
     </tr>
     <tr>
       <th>3</th>
       <td>12</td>
-      <td>0.789653</td>
-      <td>5.095783</td>
-      <td>10</td>
+      <td>0.837786</td>
+      <td>5.224438</td>
+      <td>11</td>
     </tr>
     <tr>
       <th>4</th>
       <td>6</td>
-      <td>1.046706</td>
-      <td>8.256837</td>
-      <td>4</td>
+      <td>1.067458</td>
+      <td>8.362185</td>
+      <td>5</td>
     </tr>
     <tr>
       <th>5</th>
       <td>10</td>
-      <td>1.315779</td>
-      <td>14.788991</td>
-      <td>2</td>
+      <td>1.331071</td>
+      <td>15.027225</td>
+      <td>3</td>
     </tr>
     <tr>
       <th>6</th>
-      <td>5</td>
-      <td>1.850680</td>
-      <td>25.081983</td>
-      <td>2</td>
+      <td>4</td>
+      <td>1.836886</td>
+      <td>25.347059</td>
+      <td>3</td>
     </tr>
     <tr>
       <th>7</th>
@@ -622,34 +589,41 @@ cluster_perf_df
     </tr>
     <tr>
       <th>8</th>
-      <td>3</td>
-      <td>3.340888</td>
-      <td>57.203435</td>
+      <td>13</td>
+      <td>2.602269</td>
+      <td>30.862794</td>
       <td>1</td>
     </tr>
     <tr>
       <th>9</th>
       <td>7</td>
+      <td>3.340888</td>
+      <td>57.203435</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>3</td>
       <td>3.562943</td>
       <td>72.620209</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>10</th>
-      <td>2</td>
+      <th>11</th>
+      <td>5</td>
       <td>3.857160</td>
       <td>112.449844</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>11</th>
-      <td>4</td>
-      <td>5.128544</td>
-      <td>153.500428</td>
+      <th>12</th>
+      <td>2</td>
+      <td>5.259784</td>
+      <td>187.519424</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>12</th>
+      <th>13</th>
       <td>1</td>
       <td>9.074862</td>
       <td>651.720274</td>
@@ -661,10 +635,11 @@ cluster_perf_df
 
 
 
-From the dataframe above, we can see that the distribution of the stocks amongst the clusters is very skewed. Most of the stocks are aggregated in cluster `0`. For the other clusters, we can see that the `avg_yearly_returns` and `variance` are huge. A savvy investor would definitely not go for these other clusters as the variance is way too high, ranging from ~102% to 65100%. As such, he/she would most probably invest in a stock in cluster 0. As cluster 0 still contains too many stocks to choose from, I will attempt to conduct another K-Means clustering on cluster `0`.
+From the dataframe above, we can see that the distribution of the stocks amongst the clusters is very skewed. Most of the stocks are aggregated in cluster `0`. For the other clusters, we can see that the `avg_yearly_returns` and `variance` are huge. A savvy investor would definitely not invest in these other clusters as the swing is too big, ranging from ~102% to 65100%. As such, he/she would most probably invest in a stock in cluster 0. As cluster 0 still contains too many stocks to choose from, I will attempt to conduct another K-Means clustering on cluster `0`.
 
 
 ```python
+# creating a dataframe that only consists of cluster `0`
 agg_df3_sub = agg_df3.query("cluster == 0").reset_index(drop=True)
 ```
 
@@ -674,7 +649,7 @@ plot_cluster(agg_df3_sub, max_loop=25)
 ```
 
 
-![png](final_model_files/final_model_23_0.png)
+![png](final_model-Copy1_files/final_model-Copy1_27_0.png)
 
 
 From the second graph, `Silhouette Score After K-Means Clustering`, we can see that there was a steep drop in silhouette score between 5 clusters and 6 clusters. As such, I would use 5 clusters in my K-Means model below.
@@ -686,8 +661,8 @@ second_trial= apply_cluster(agg_df3_sub, clusters=5)
 
     clustering performance
     -----------------------------------
-    silhouette score: 0.4
-    sse withing cluster: 561.0
+    silhouette score: 0.38
+    sse withing cluster: 591.0
     
 
 
@@ -733,38 +708,38 @@ sub_cluster_perf_df
   <tbody>
     <tr>
       <th>0</th>
-      <td>3</td>
-      <td>-0.111930</td>
-      <td>0.107717</td>
-      <td>129</td>
+      <td>4</td>
+      <td>-0.080652</td>
+      <td>0.113519</td>
+      <td>184</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>2</td>
-      <td>0.038041</td>
-      <td>0.281023</td>
-      <td>99</td>
+      <td>3</td>
+      <td>0.044477</td>
+      <td>0.303681</td>
+      <td>84</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>0.081053</td>
-      <td>0.055844</td>
-      <td>620</td>
+      <td>0.081021</td>
+      <td>0.053163</td>
+      <td>603</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>1</td>
-      <td>0.222080</td>
-      <td>0.124024</td>
-      <td>225</td>
+      <td>2</td>
+      <td>0.206852</td>
+      <td>0.115717</td>
+      <td>257</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>4</td>
-      <td>0.288640</td>
-      <td>0.401854</td>
-      <td>50</td>
+      <td>1</td>
+      <td>0.297600</td>
+      <td>0.368385</td>
+      <td>65</td>
     </tr>
   </tbody>
 </table>
@@ -772,9 +747,15 @@ sub_cluster_perf_df
 
 
 
-To better ascertain the performance of each cluster, I decided to add in Sharpe Ratio as a metric to better evaluate their performance. Using the first day of the year, 5-years daily U.S. yield rates, from https://home.treasury.gov/ as the risk-free rate, I have computed the Sharpe Ratio as such:
+From the dataframe above, we can see that cluster `0-0` and cluster `0-2` would be the 2 better clusters to invest, amongst the rest. Cluster `0-0` yields a decent return of 8.1% with a 5.3% variance, while cluster `0-2` yields a much higher return of 20.7%, with a correspondingly higher variance of 11.6%. I decided to add in Sharpe Ratio as a metric to better evaluate the cluster performance.
 
-$Sharpe\ Ratio = (R_s - R_f) /{SD_s}$
+**_Sharpe Ratio is used to help investors understand the return of an investment compared to its risk. The ratio is the average return earned in excess of the risk-free rate per unit of volatility or total risk._**
+
+Sharpe Ratio can be computed as such:
+
+**$Sharpe\ Ratio = (R_s - R_f) /{SD_s}$**
+
+I will be using the first day of the year, 5-years daily U.S. yield rates, from https://home.treasury.gov/ as the risk-free rate.
 
 
 ```python
@@ -870,16 +851,17 @@ cluster_perf(sub_cluster_transform, sub_cluster_sharpe_ratio)
 ```
 
 
-![png](final_model_files/final_model_34_0.png)
+![png](final_model-Copy1_files/final_model-Copy1_38_0.png)
 
 
-From the charts above, we can see that cluster `1` has the best sharpe ratio distribution amongst the rest and that their average returns (22.2%) and variance (12%) is still acceptable for my risk appetite. For someone who have a smaller risk appetite, he/she should be looking at cluster `0`, where the sharpe ratio is still fairly decent, along with moderate average returns (8.1%) and variance(5.6%)
+From the charts above, we can see that cluster `0-2` has the best Sharpe Ratio distribution amongst the rest and that its average returns (20.7%) and variance (11.6%) is still acceptable for my risk appetite. For someone who have a smaller risk appetite, he/she should be looking at cluster `0-0`, where the sharpe ratio is still fairly decent, along with moderate average returns (8.1%) and variance(5.3%)
 
-As there are still more than 200 stocks in cluster `1` and there are some outliers (outperforming stocks) in that cluster, I would like to take segement it even further so that I can have a smaller group of stocks to research on.
+Coupled with the fact that there are still more than 200 stocks in cluster `0-2` and there are some outliers (outperforming stocks) in that cluster, I would like to take segement it even further so that I can have a smaller group of stocks to research on.
 
 
 ```python
-best_sub_cluster = second_trial.query("cluster == 1")
+# filtering out for cluster 1
+best_sub_cluster = second_trial.query("cluster == 2")
 ```
 
 
@@ -895,25 +877,20 @@ plot_cluster(best_sub_cluster, max_loop=15)
     
 
 
-![png](final_model_files/final_model_37_1.png)
+![png](final_model-Copy1_files/final_model-Copy1_41_1.png)
 
-I decided to conduct my K-Means clustering with 7 clusters
+
+Based the above 2 graphs, I will use 6 clusters in my K-Means model below.
+
 
 ```python
-third_trial = apply_cluster(best_sub_cluster, clusters=7)
+third_trial = apply_cluster(best_sub_cluster, clusters=6)
 ```
-
-    C:\Users\timothy.ong\AppData\Local\Continuum\anaconda3\lib\site-packages\pandas\core\frame.py:3697: SettingWithCopyWarning: 
-    A value is trying to be set on a copy of a slice from a DataFrame
-    
-    See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
-      errors=errors)
-    
 
     clustering performance
     -----------------------------------
     silhouette score: 0.39
-    sse withing cluster: 40.0
+    sse withing cluster: 46.0
     
 
     C:\Users\timothy.ong\AppData\Local\Continuum\anaconda3\lib\site-packages\ipykernel_launcher.py:15: SettingWithCopyWarning: 
@@ -967,51 +944,44 @@ best_sub_cluster_perf
     <tr>
       <th>0</th>
       <td>4</td>
-      <td>0.147380</td>
-      <td>0.148202</td>
-      <td>40</td>
+      <td>0.126753</td>
+      <td>0.154927</td>
+      <td>37</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>2</td>
-      <td>0.196281</td>
-      <td>0.072204</td>
-      <td>57</td>
+      <td>0</td>
+      <td>0.179237</td>
+      <td>0.081487</td>
+      <td>73</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>5</td>
-      <td>0.200090</td>
-      <td>0.207889</td>
-      <td>30</td>
+      <td>2</td>
+      <td>0.191212</td>
+      <td>0.191096</td>
+      <td>36</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>1</td>
-      <td>0.238052</td>
-      <td>0.140600</td>
-      <td>36</td>
+      <td>3</td>
+      <td>0.239662</td>
+      <td>0.050322</td>
+      <td>57</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>0</td>
-      <td>0.259938</td>
-      <td>0.050189</td>
-      <td>36</td>
+      <td>5</td>
+      <td>0.251038</td>
+      <td>0.152885</td>
+      <td>43</td>
     </tr>
     <tr>
       <th>5</th>
-      <td>6</td>
-      <td>0.308919</td>
-      <td>0.186079</td>
-      <td>18</td>
-    </tr>
-    <tr>
-      <th>6</th>
-      <td>3</td>
-      <td>0.424229</td>
-      <td>0.175889</td>
-      <td>8</td>
+      <td>1</td>
+      <td>0.367981</td>
+      <td>0.157878</td>
+      <td>11</td>
     </tr>
   </tbody>
 </table>
@@ -1035,9 +1005,15 @@ cluster_perf(best_sub_cluster_transform, best_sub_cluster_sharpe_ratio)
 ```
 
 
-![png](final_model_files/final_model_43_0.png)
+![png](final_model-Copy1_files/final_model-Copy1_47_0.png)
 
 
-We can see that cluster `0` produces the best sharpe ratio and a very impressive average returns of 26% and variance of 5%. This group of 36 stocks definitely deserve my attention to conduct a proper equity research.
+We can see that cluster `0-2-3` has the best sharpe ratio distribution and a very impressive average returns of 24.0% and variance of 5.0% (over the last 7 years). This golden cluster of 57 stocks definitely captured my attention and I should focused my research on them and create a portfolio based on them.
 
 # Conclusion
+
+In the first iteration of K-Means clustering, 14 clusters were formed. 13 of those clusters had extremely high returns and variance, stocks where no savvy investors would have purchased. As such, I have decided to conduct a second iteration on the remaining cluster, cluster `0`, that contains a majority of the stocks (1193 out of 1300 stocks). 
+
+In the second iteration of K-Means clustering of the sub-cluster, 5 clusters were formed. As the performance of the clusters were fairly close, I have introduced a new metric, Sharpe Ratio, to better evaluate the performance of each cluster. From the Sharpe Ratio boxplot, it can be seen that cluster `0-2` was the better performing cluster as its Sharpe Ratio distribution was on the higher end. Since cluster `0-2` compromised of 257 stocks (still a fairly large number of stocks to study) and that there are some outliers in the Sharpe Ratio, I would like to take a more in-depth look into it, to see whether can I further narrow down to form a golden cluster.
+
+In my third iteration of K-Means clustering of the sub-sub-cluster, 6 clusters were formed. From this last iteration, we can see a clear winner. Cluster `0-2-3` has the best Sharp Ratio distribution and that it has an impressive average returns of 24.0% and a variance of 5.0%, over the last 7 years. I should focus my research on this cluster (57 stocks) and choose the best stocks to invest in, based on fundamental analysis.

@@ -5,10 +5,10 @@
 
 import pandas as pd
 import numpy as np
-import datetime 
-from dateutil.relativedelta import relativedelta
 import matplotlib.pyplot as plt
 import seaborn as sns
+import datetime 
+from dateutil.relativedelta import relativedelta
 
 get_ipython().run_line_magic('matplotlib', 'inline')
 
@@ -16,11 +16,20 @@ pd.set_option('display.max_columns', 100)
 
 
 # # Introduction
+# I have recently gone back for an In-Camp Training (military service) and was catching up with a few of my army buddies. The most common topic that we were talking about was on investments. All of us are chasing the dream of creating a source of passive income, to attain financial freedom. Many of them were sharing their own investment strategies and insights to stocks that they have purchased. This was running through my mind at that point in time:
+# 
+# **_“Out of the hundreds and thousands of stocks that are available, how can I better narrow down to a handful of stocks that suits my risk appetite and have better than average returns, to do my due diligence on?”_**
+#  
+# I shall attempt to use K-Means clustering algorithm to answer this question. 
+# 
+# To narrow down my scope, I would be using stocks listed on NASDAQ and NYSE.
+
+# ## Data Transformation
 
 
 
-# 2006 - 2017 raw data is taken from Stocker package which uses Quandl API
-raw_data = pd.read_csv('./2012_2017_data.csv', index_col=0)
+# 2006 - 2017 raw data is taken from Stocker python package which pulls from Quandl API
+raw_data = pd.read_csv('./agg_df2_2012_onwards.csv', index_col=0)
 
 
 
@@ -41,7 +50,7 @@ df_2018.head(3)
 
 
 
-# narrowing data set to 2012 - 2017
+# narrowing dataset to 2012 - 2017
 # creating new column `year`
 df_2012_2017 = (
     raw_data
@@ -51,9 +60,11 @@ df_2012_2017 = (
 )
 
 
+# `df_2012_2017` dataset provides the data for each stock performance on a daily basis, during the stated time period. I would like to obtain the annual performance of each stock. As such, I would need to identify the first and last trading day for each year.
 
 
-# getting the first day and last day of each year that is available in the data set
+
+# getting the first day and last day of each year that is available in the dataset
 first_date_list = [df_2012_2017.query("year == '{}'".format(2012+i)).date.min() for i in range(6)]
 last_date_list = [df_2012_2017.query("year == '{}'".format(2012+i)).date.max() for i in range(6)]
 first_date_df =pd.DataFrame({"date": first_date_list}) 
@@ -182,9 +193,13 @@ agg_df3.head(3)
 agg_df3.info()
 
 
+# 1300 stocks will be used for this study.
+
+# ### Modelling
 
 
-from sklearn.preprocessing import RobustScaler, MinMaxScaler, StandardScaler
+
+from sklearn.preprocessing import RobustScaler
 from sklearn.cluster import KMeans
 from sklearn import metrics
 
@@ -238,7 +253,7 @@ def plot_cluster(df, max_loop=50):
 plot_cluster(agg_df3, max_loop=25)
 
 
-# From the first graph, `Within Cluster SSE After K-Means Clustering`, we can see that as the number of clusters increase pass 7, the sum of square of errors within clusters plateaus off. From the second graph, `Silhouette Score After K-Means Clustering`, we can see that there are various parts of the graph where a kink can be seen. Since there is not much a difference in SSE after 7 clusters and that the drop in sihouette score is quite significant between 13 clusters and 14 clusters, I would use 13 clusters in my K-Means model below.
+# From the first graph, `Within Cluster SSE After K-Means Clustering`, we can see that as the number of clusters increase pass 7, the sum of square of errors within clusters plateaus off. From the second graph, `Silhouette Score After K-Means Clustering`, we can see that there are various parts of the graph where a kink can be seen. Since there is not much a difference in SSE after 7 clusters and that the drop in sihouette score is quite significant between 14 clusters and 15 clusters, I would use 14 clusters in my K-Means model below.
 
 
 
@@ -269,7 +284,7 @@ def apply_cluster(df, clusters=2):
 
 
 
-first_trial = apply_cluster(agg_df3, clusters=13)
+first_trial = apply_cluster(agg_df3, clusters=14)
 
 
 
@@ -285,10 +300,11 @@ cluster_perf_df = (
 cluster_perf_df
 
 
-# From the dataframe above, we can see that the distribution of the stocks amongst the clusters is very skewed. Most of the stocks are aggregated in cluster `0`. For the other clusters, we can see that the `avg_yearly_returns` and `variance` are huge. A savvy investor would definitely not go for these other clusters as the variance is way too high, ranging from ~102% to 65100%. As such, he/she would most probably invest in a stock in cluster 0. As cluster 0 still contains too many stocks to choose from, I will attempt to conduct another K-Means clustering on cluster `0`.
+# From the dataframe above, we can see that the distribution of the stocks amongst the clusters is very skewed. Most of the stocks are aggregated in cluster `0`. For the other clusters, we can see that the `avg_yearly_returns` and `variance` are huge. A savvy investor would definitely not invest in these other clusters as the swing is too big, ranging from ~102% to 65100%. As such, he/she would most probably invest in a stock in cluster 0. As cluster 0 still contains too many stocks to choose from, I will attempt to conduct another K-Means clustering on cluster `0`.
 
 
 
+# creating a dataframe that only consists of cluster `0`
 agg_df3_sub = agg_df3.query("cluster == 0").reset_index(drop=True)
 
 
@@ -317,9 +333,15 @@ sub_cluster_perf_df = (
 sub_cluster_perf_df
 
 
-# To better ascertain the performance of each cluster, I decided to add in Sharpe Ratio as a metric to better evaluate their performance. Using the first day of the year, 5-years daily U.S. yield rates, from https://home.treasury.gov/ as the risk-free rate, I have computed the Sharpe Ratio as such:
+# From the dataframe above, we can see that cluster `0-0` and cluster `0-2` would be the 2 better clusters to invest, amongst the rest. Cluster `0-0` yields a decent return of 8.1% with a 5.3% variance, while cluster `0-2` yields a much higher return of 20.7%, with a correspondingly higher variance of 11.6%. I decided to add in Sharpe Ratio as a metric to better evaluate the cluster performance.
 # 
-# $Sharpe\ Ratio = (R_s - R_f) /{SD_s}$
+# **_Sharpe Ratio is used to help investors understand the return of an investment compared to its risk. The ratio is the average return earned in excess of the risk-free rate per unit of volatility or total risk._**
+# 
+# Sharpe Ratio can be computed as such:
+# 
+# **$Sharpe\ Ratio = (R_s - R_f) /{SD_s}$**
+# 
+# I will be using the first day of the year, 5-years daily U.S. yield rates, from https://home.treasury.gov/ as the risk-free rate.
 
 
 
@@ -414,23 +436,26 @@ def cluster_perf(transform_df, sharpe_ratio_df):
 cluster_perf(sub_cluster_transform, sub_cluster_sharpe_ratio)
 
 
-# From the charts above, we can see that cluster `1` has the best sharpe ratio distribution amongst the rest and that their average returns (22.2%) and variance (12%) is still acceptable for my risk appetite. For someone who have a smaller risk appetite, he/she should be looking at cluster `0`, where the sharpe ratio is still fairly decent, along with moderate average returns (8.1%) and variance(5.6%)
+# From the charts above, we can see that cluster `0-2` has the best Sharpe Ratio distribution amongst the rest and that its average returns (20.7%) and variance (11.6%) is still acceptable for my risk appetite. For someone who have a smaller risk appetite, he/she should be looking at cluster `0-0`, where the sharpe ratio is still fairly decent, along with moderate average returns (8.1%) and variance(5.3%)
 # 
-# As there are still more than 200 stocks in cluster `1` and there are some outliers (outperforming stocks) in that cluster, I would like to take segement it even further so that I can have a smaller group of stocks to research on.
+# Coupled with the fact that there are still more than 200 stocks in cluster `0-2` and there are some outliers (outperforming stocks) in that cluster, I would like to take segement it even further so that I can have a smaller group of stocks to research on.
 
 
 
-best_sub_cluster = second_trial.query("cluster == 1")
+# filtering out for cluster 1
+best_sub_cluster = second_trial.query("cluster == 2")
 
 
 
 
 plot_cluster(best_sub_cluster, max_loop=15)
 
-I decided to conduct my K-Means clustering with 7 clusters
+
+# Based the above 2 graphs, I will use 6 clusters in my K-Means model below.
 
 
-third_trial = apply_cluster(best_sub_cluster, clusters=7)
+
+third_trial = apply_cluster(best_sub_cluster, clusters=6)
 
 
 
@@ -460,6 +485,12 @@ best_sub_cluster_transform, best_sub_cluster_sharpe_ratio = get_transform_df(thi
 cluster_perf(best_sub_cluster_transform, best_sub_cluster_sharpe_ratio)
 
 
-# We can see that cluster `0` produces the best sharpe ratio and a very impressive average returns of 26% and variance of 5%. This group of 36 stocks definitely deserve my attention to conduct a proper equity research.
+# We can see that cluster `0-2-3` has the best sharpe ratio distribution and a very impressive average returns of 24.0% and variance of 5.0% (over the last 7 years). This golden cluster of 57 stocks definitely captured my attention and I should focused my research on them and create a portfolio based on them.
 
 # # Conclusion
+
+# In the first iteration of K-Means clustering, 14 clusters were formed. 13 of those clusters had extremely high returns and variance, stocks where no savvy investors would have purchased. As such, I have decided to conduct a second iteration on the remaining cluster, cluster `0`, that contains a majority of the stocks (1193 out of 1300 stocks). 
+# 
+# In the second iteration of K-Means clustering of the sub-cluster, 5 clusters were formed. As the performance of the clusters were fairly close, I have introduced a new metric, Sharpe Ratio, to better evaluate the performance of each cluster. From the Sharpe Ratio boxplot, it can be seen that cluster `0-2` was the better performing cluster as its Sharpe Ratio distribution was on the higher end. Since cluster `0-2` compromised of 257 stocks (still a fairly large number of stocks to study) and that there are some outliers in the Sharpe Ratio, I would like to take a more in-depth look into it, to see whether can I further narrow down to form a golden cluster.
+# 
+# In my third iteration of K-Means clustering of the sub-sub-cluster, 6 clusters were formed. From this last iteration, we can see a clear winner. Cluster `0-2-3` has the best Sharp Ratio distribution and that it has an impressive average returns of 24.0% and a variance of 5.0%, over the last 7 years. I should focus my research on this cluster (57 stocks) and choose the best stocks to invest in, based on fundamental analysis.
