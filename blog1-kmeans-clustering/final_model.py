@@ -34,7 +34,7 @@ raw_data = pd.read_csv('./agg_df2_2012_onwards.csv', index_col=0)
 
 
 
-raw_data.head(3)
+raw_data.head()
 
 
 
@@ -185,7 +185,7 @@ agg_df3 = (
 
 
 
-agg_df3.head(3)
+agg_df3.head()
 
 
 
@@ -486,6 +486,11 @@ cluster_perf(best_sub_cluster_transform, best_sub_cluster_sharpe_ratio)
 
 
 # We can see that cluster `0-2-3` has the best sharpe ratio distribution and a very impressive average returns of 24.0% and variance of 5.0% (over the last 7 years). This golden cluster of 57 stocks definitely captured my attention and I should focused my research on them and create a portfolio based on them.
+
+
+
+third_trial.query("cluster == 3").ticker.unique()
+
 
 # # Conclusion
 

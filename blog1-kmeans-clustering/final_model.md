@@ -36,7 +36,7 @@ raw_data = pd.read_csv('./agg_df2_2012_onwards.csv', index_col=0)
 
 
 ```python
-raw_data.head(3)
+raw_data.head()
 ```
 
 
@@ -91,6 +91,22 @@ raw_data.head(3)
       <td>2012</td>
       <td>2.26</td>
       <td>2.24</td>
+    </tr>
+    <tr>
+      <th>3431</th>
+      <td>MCBC</td>
+      <td>2012-01-06</td>
+      <td>2012</td>
+      <td>2.24</td>
+      <td>2.27</td>
+    </tr>
+    <tr>
+      <th>3432</th>
+      <td>MCBC</td>
+      <td>2012-01-09</td>
+      <td>2012</td>
+      <td>2.20</td>
+      <td>2.25</td>
     </tr>
   </tbody>
 </table>
@@ -317,7 +333,7 @@ agg_df3 = (
 
 
 ```python
-agg_df3.head(3)
+agg_df3.head()
 ```
 
 
@@ -364,6 +380,18 @@ agg_df3.head(3)
       <td>AAP</td>
       <td>0.165665</td>
       <td>0.124715</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>AAPL</td>
+      <td>-0.005033</td>
+      <td>0.161882</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>ABC</td>
+      <td>0.131880</td>
+      <td>0.083416</td>
     </tr>
   </tbody>
 </table>
@@ -447,7 +475,7 @@ plot_cluster(agg_df3, max_loop=25)
 ```
 
 
-![png](final_model-Copy1_files/final_model-Copy1_20_0.png)
+![png](final_model_files/final_model_20_0.png)
 
 
 From the first graph, `Within Cluster SSE After K-Means Clustering`, we can see that as the number of clusters increase pass 7, the sum of square of errors within clusters plateaus off. From the second graph, `Silhouette Score After K-Means Clustering`, we can see that there are various parts of the graph where a kink can be seen. Since there is not much a difference in SSE after 7 clusters and that the drop in sihouette score is quite significant between 14 clusters and 15 clusters, I would use 14 clusters in my K-Means model below.
@@ -649,7 +677,7 @@ plot_cluster(agg_df3_sub, max_loop=25)
 ```
 
 
-![png](final_model-Copy1_files/final_model-Copy1_27_0.png)
+![png](final_model_files/final_model_27_0.png)
 
 
 From the second graph, `Silhouette Score After K-Means Clustering`, we can see that there was a steep drop in silhouette score between 5 clusters and 6 clusters. As such, I would use 5 clusters in my K-Means model below.
@@ -851,7 +879,7 @@ cluster_perf(sub_cluster_transform, sub_cluster_sharpe_ratio)
 ```
 
 
-![png](final_model-Copy1_files/final_model-Copy1_38_0.png)
+![png](final_model_files/final_model_38_0.png)
 
 
 From the charts above, we can see that cluster `0-2` has the best Sharpe Ratio distribution amongst the rest and that its average returns (20.7%) and variance (11.6%) is still acceptable for my risk appetite. For someone who have a smaller risk appetite, he/she should be looking at cluster `0-0`, where the sharpe ratio is still fairly decent, along with moderate average returns (8.1%) and variance(5.3%)
@@ -877,7 +905,7 @@ plot_cluster(best_sub_cluster, max_loop=15)
     
 
 
-![png](final_model-Copy1_files/final_model-Copy1_41_1.png)
+![png](final_model_files/final_model_41_1.png)
 
 
 Based the above 2 graphs, I will use 6 clusters in my K-Means model below.
@@ -1005,10 +1033,28 @@ cluster_perf(best_sub_cluster_transform, best_sub_cluster_sharpe_ratio)
 ```
 
 
-![png](final_model-Copy1_files/final_model-Copy1_47_0.png)
+![png](final_model_files/final_model_47_0.png)
 
 
 We can see that cluster `0-2-3` has the best sharpe ratio distribution and a very impressive average returns of 24.0% and variance of 5.0% (over the last 7 years). This golden cluster of 57 stocks definitely captured my attention and I should focused my research on them and create a portfolio based on them.
+
+
+```python
+third_trial.query("cluster == 3").ticker.unique()
+```
+
+
+
+
+    array(['ADSK', 'ANTM', 'AZPN', 'CACC', 'CHDN', 'CHE', 'CI', 'COO', 'DENN',
+           'FDEF', 'FICO', 'FIS', 'FIX', 'HELE', 'HIFS', 'ICUI', 'IHC',
+           'INTU', 'IT', 'JKHY', 'KAI', 'KWR', 'LFUS', 'LII', 'LION', 'LOW',
+           'MCO', 'MLAB', 'MMSI', 'MOH', 'MSFT', 'MTD', 'MTN', 'NSP', 'OLBK',
+           'OMCL', 'ORLY', 'PRSC', 'RDI', 'RHT', 'RMD', 'SBAC', 'SCHW', 'SCI',
+           'SHEN', 'SHW', 'STE', 'TDY', 'TFX', 'TMO', 'TSS', 'ULTI', 'UNH',
+           'USPH', 'VLO', 'VRSN', 'ZBRA'], dtype=object)
+
+
 
 # Conclusion
 
