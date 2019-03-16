@@ -14,7 +14,6 @@ pd.set_option('display.max_colwidth', -1)
 
 ```python
 sqlite_file = 'database.sqlite'    # name of the sqlite database file
-
 # table names
 # country
 # league
@@ -40,6 +39,7 @@ player = pd.read_sql_query("select * from player", conn)
 player_attributes = pd.read_sql_query("select * from player_attributes", conn)
 team_attributes = pd.read_sql_query("select * from team_attributes", conn)
 team = pd.read_sql_query("select * from team", conn)
+player_position = pd.read_csv('./players_position.csv')
 ```
 
 
@@ -395,110 +395,6 @@ player_attributes_2.head(2)
 
 
 ```python
-league
-```
-
-
-
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>id</th>
-      <th>country_id</th>
-      <th>name</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>1</td>
-      <td>1</td>
-      <td>Belgium Jupiler League</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>1729</td>
-      <td>1729</td>
-      <td>England Premier League</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>4769</td>
-      <td>4769</td>
-      <td>France Ligue 1</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>7809</td>
-      <td>7809</td>
-      <td>Germany 1. Bundesliga</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>10257</td>
-      <td>10257</td>
-      <td>Italy Serie A</td>
-    </tr>
-    <tr>
-      <th>5</th>
-      <td>13274</td>
-      <td>13274</td>
-      <td>Netherlands Eredivisie</td>
-    </tr>
-    <tr>
-      <th>6</th>
-      <td>15722</td>
-      <td>15722</td>
-      <td>Poland Ekstraklasa</td>
-    </tr>
-    <tr>
-      <th>7</th>
-      <td>17642</td>
-      <td>17642</td>
-      <td>Portugal Liga ZON Sagres</td>
-    </tr>
-    <tr>
-      <th>8</th>
-      <td>19694</td>
-      <td>19694</td>
-      <td>Scotland Premier League</td>
-    </tr>
-    <tr>
-      <th>9</th>
-      <td>21518</td>
-      <td>21518</td>
-      <td>Spain LIGA BBVA</td>
-    </tr>
-    <tr>
-      <th>10</th>
-      <td>24558</td>
-      <td>24558</td>
-      <td>Switzerland Super League</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
-
-
-```python
 match_selected_columns=[
     'season', 'match_api_id', 'home_team_api_id', 'away_team_api_id',
     'home_player_X1', 'home_player_X2', 'home_player_X3', 'home_player_X4', 'home_player_X5', 'home_player_X6', 'home_player_X7', 'home_player_X8', 
@@ -779,62 +675,90 @@ epl_matches.head(2)
 
 
 ```python
+home_player_cols= ['home_player_1','home_player_2', 'home_player_3', 'home_player_4', 'home_player_5', 'home_player_6', 
+                    'home_player_7', 'home_player_8', 'home_player_9', 'home_player_10', 'home_player_11']
+away_player_cols = ['away_player_1', 'away_player_2', 'away_player_3', 'away_player_4', 'away_player_5', 'away_player_6', 
+                    'away_player_7', 'away_player_8', 'away_player_9', 'away_player_10', 'away_player_11']
+```
+
+
+```python
+def get_team(df, min_max='min', home_away_id='home_team_api_id'):
+    final_df = (
+        df
+        [['season', '{}'.format(col), '{}'.format(home_away_id)]]
+        .drop_duplicates()
+        .groupby(["season", "{}".format(col)])
+        .agg({"{}".format(home_away_id): "min"})
+        .reset_index()
+        .rename(columns={"{}".format(col): "player_api_id", "{}".format(home_away_id): "team_api_id"})
+    )
+    return final_df
+```
+
+
+```python
 first = True
-for col in ['home_player_1','home_player_2', 'home_player_3', 'home_player_4', 'home_player_5', 'home_player_6', 'home_player_7', 'home_player_8', 'home_player_9', 'home_player_10', 'home_player_11']:
+for col in home_player_cols:
     if first is True:
-        first_team = (
-            epl_matches
-            [['season', '{}'.format(col), 'home_team_api_id']]
-            .drop_duplicates()
-            .groupby(["season", "{}".format(col)])
-            .agg({"home_team_api_id": "min"})
-            .reset_index()
-            .sort_values('home_team_api_id', ascending=False)
-            .rename(columns={"{}".format(col): "player_id", "home_team_api_id": "team_api_id"})
-        )
-
-        second_team = (
-            epl_matches
-            [['season', '{}'.format(col), 'home_team_api_id']]
-            .drop_duplicates()
-            .groupby(["season", '{}'.format(col)])
-            .agg({"home_team_api_id": "max"})
-            .reset_index()
-            .sort_values('home_team_api_id', ascending=False)
-            .rename(columns={'{}'.format(col): "player_id", "home_team_api_id": "team_api_id"})
-        )
+        first_df = get_team(epl_matches, min_max='min', home_away_id='home_team_api_id')
+        second_df = get_team(epl_matches, min_max='max', home_away_id='home_team_api_id')
         home_final = pd.concat([first_team, second_team], axis=0)
+        first = False
     else:
-        first_team = (
-            epl_matches
-            [['season', '{}'.format(col), 'home_team_api_id']]
-            .drop_duplicates()
-            .groupby(["season", '{}'.format(col)])
-            .agg({"home_team_api_id": "min"})
-            .reset_index()
-            .sort_values('home_team_api_id', ascending=False)
-            .rename(columns={'{}'.format(col): "player_id", "home_team_api_id": "team_api_id"})
-        )
-
-        second_team = (
-            epl_matches
-            [['season', '{}'.format(col), 'home_team_api_id']]
-            .drop_duplicates()
-            .groupby(["season", '{}'.format(col)])
-            .agg({"home_team_api_id": "max"})
-            .reset_index()
-            .sort_values('home_team_api_id', ascending=False)
-            .rename(columns={'{}'.format(col): "player_id", "home_team_api_id": "team_api_id"})
-        )
+        first_team = get_team(epl_matches, min_max='min', home_away_id='home_team_api_id')
+        second_team = get_team(epl_matches, min_max='max', home_away_id='home_team_api_id')
         home_intermediate = pd.concat([first_team, second_team], axis=0)
         home_final = pd.concat([home_intermediate, home_final], axis=0)
-
-final.drop_duplicates(inplace=True)
+        
+home_final = (
+    home_final
+    .drop_duplicates()
+    .query("player_api_id != 0")
+    .reset_index(drop=True)
+)
 ```
 
 
 ```python
-final.query("player_id == 46518 and season == '2009/2010'")
+first = True
+for col in away_player_cols:
+    if first is True:
+        first_df = get_team(epl_matches, min_max='min', home_away_id='away_team_api_id')
+        second_df = get_team(epl_matches, min_max='max', home_away_id='away_team_api_id')
+        away_final = pd.concat([first_team, second_team], axis=0)
+        first = False
+    else:
+        first_team = get_team(epl_matches, min_max='min', home_away_id='away_team_api_id')
+        second_team = get_team(epl_matches, min_max='max', home_away_id='away_team_api_id')
+        away_intermediate = pd.concat([first_team, second_team], axis=0)
+        away_final = pd.concat([away_intermediate, away_final], axis=0)
+        
+away_final = (
+    away_final
+    .drop_duplicates()
+    .query("player_api_id != 0")
+    .reset_index(drop=True)
+)
+```
+
+
+```python
+player_team = pd.concat([home_final, away_final], axis=0)
+```
+
+
+```python
+player_team = (
+    player_team
+    .drop_duplicates()
+    .reset_index(drop=True)
+)
+```
+
+
+```python
+player_team.query("player_api_id == 38836 and season == '2008/2009'")
 ```
 
 
@@ -859,1490 +783,77 @@ final.query("player_id == 46518 and season == '2009/2010'")
     <tr style="text-align: right;">
       <th></th>
       <th>season</th>
-      <th>player_id</th>
-      <th>home_team_api_id</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>70</th>
-      <td>2009/2010</td>
-      <td>46518.0</td>
-      <td>8462</td>
-    </tr>
-    <tr>
-      <th>70</th>
-      <td>2009/2010</td>
-      <td>46518.0</td>
-      <td>10194</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
-
-
-```python
-match.query("season == '2009/2010' and home_player_1 == 46518")[['season', 'home_team_api_id', 'date']]
-```
-
-
-
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>season</th>
-      <th>home_team_api_id</th>
-      <th>date</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>2158</th>
-      <td>2009/2010</td>
-      <td>8462</td>
-      <td>2009-11-28 00:00:00</td>
-    </tr>
-    <tr>
-      <th>2168</th>
-      <td>2009/2010</td>
-      <td>8462</td>
-      <td>2009-12-05 00:00:00</td>
-    </tr>
-    <tr>
-      <th>2202</th>
-      <td>2009/2010</td>
-      <td>8462</td>
-      <td>2009-12-19 00:00:00</td>
-    </tr>
-    <tr>
-      <th>2231</th>
-      <td>2009/2010</td>
-      <td>8462</td>
-      <td>2009-12-30 00:00:00</td>
-    </tr>
-    <tr>
-      <th>2261</th>
-      <td>2009/2010</td>
-      <td>8462</td>
-      <td>2010-01-26 00:00:00</td>
-    </tr>
-    <tr>
-      <th>2411</th>
-      <td>2009/2010</td>
-      <td>10194</td>
-      <td>2010-05-01 00:00:00</td>
-    </tr>
-    <tr>
-      <th>2435</th>
-      <td>2009/2010</td>
-      <td>8462</td>
-      <td>2009-08-30 00:00:00</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
-
-
-```python
-player.query("player_api_id == 46518")
-```
-
-
-
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>id</th>
       <th>player_api_id</th>
-      <th>player_name</th>
-      <th>player_fifa_api_id</th>
-      <th>birthday</th>
+      <th>team_api_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>2287</th>
+      <td>2008/2009</td>
+      <td>38836.0</td>
+      <td>8472</td>
+    </tr>
+    <tr>
+      <th>3519</th>
+      <td>2008/2009</td>
+      <td>38836.0</td>
+      <td>8586</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+
+
+```python
+player_attributes_3 = (
+    player_attributes_2
+    .merge(player_team, on=['season', 'player_api_id'], how='left')
+    .merge(team_attributes_2[['team_api_id', 'season', 'league_name']], on=['team_api_id', 'season'], how='left')
+    .query("league_name == 'England Premier League'")
+    [['league_name', 'player_api_id', 'season', 'team_api_id', 'age', 'height', 'weight', 'overall_rating', 'potential', 
+      'crossing', 'finishing', 'heading_accuracy', 'short_passing', 'volleys', 'dribbling', 'curve', 'free_kick_accuracy', 'long_passing', 'ball_control',
+      'acceleration', 'sprint_speed', 'agility', 'reactions', 'balance', 'shot_power', 'jumping', 'stamina', 'strength', 'long_shots', 'aggression', 
+      'interceptions', 'positioning', 'vision', 'penalties', 'marking', 'standing_tackle', 'sliding_tackle', 
+      'gk_diving','gk_handling', 'gk_kicking', 'gk_positioning', 'gk_reflexes']]
+)
+```
+
+
+```python
+player_attributes_3.head(2)
+```
+
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>league_name</th>
+      <th>player_api_id</th>
+      <th>season</th>
+      <th>team_api_id</th>
+      <th>age</th>
       <th>height</th>
       <th>weight</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>1029</th>
-      <td>1032</td>
-      <td>46518</td>
-      <td>Asmir Begovic</td>
-      <td>172723</td>
-      <td>1987-06-20 00:00:00</td>
-      <td>200.66</td>
-      <td>183</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
-
-
-```python
-team.query("team_api_id in (8462, 10194)")
-```
-
-
-
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>id</th>
-      <th>team_api_id</th>
-      <th>team_fifa_api_id</th>
-      <th>team_long_name</th>
-      <th>team_short_name</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>40</th>
-      <td>3472</td>
-      <td>10194</td>
-      <td>1806.0</td>
-      <td>Stoke City</td>
-      <td>STK</td>
-    </tr>
-    <tr>
-      <th>44</th>
-      <td>3476</td>
-      <td>8462</td>
-      <td>1790.0</td>
-      <td>Portsmouth</td>
-      <td>POR</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
-
-
-```python
-epl_matches.query("home_player_1==23021 and season == '2009/2010'")
-```
-
-
-
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>season</th>
-      <th>match_api_id</th>
-      <th>home_team_api_id</th>
-      <th>away_team_api_id</th>
-      <th>home_player_X1</th>
-      <th>home_player_X2</th>
-      <th>home_player_X3</th>
-      <th>home_player_X4</th>
-      <th>home_player_X5</th>
-      <th>home_player_X6</th>
-      <th>home_player_X7</th>
-      <th>home_player_X8</th>
-      <th>home_player_X9</th>
-      <th>home_player_X10</th>
-      <th>home_player_X11</th>
-      <th>away_player_X1</th>
-      <th>away_player_X2</th>
-      <th>away_player_X3</th>
-      <th>away_player_X4</th>
-      <th>away_player_X5</th>
-      <th>away_player_X6</th>
-      <th>away_player_X7</th>
-      <th>away_player_X8</th>
-      <th>away_player_X9</th>
-      <th>away_player_X10</th>
-      <th>away_player_X11</th>
-      <th>home_player_Y1</th>
-      <th>home_player_Y2</th>
-      <th>home_player_Y3</th>
-      <th>home_player_Y4</th>
-      <th>home_player_Y5</th>
-      <th>home_player_Y6</th>
-      <th>home_player_Y7</th>
-      <th>home_player_Y8</th>
-      <th>home_player_Y9</th>
-      <th>home_player_Y10</th>
-      <th>home_player_Y11</th>
-      <th>away_player_Y1</th>
-      <th>away_player_Y2</th>
-      <th>away_player_Y3</th>
-      <th>away_player_Y4</th>
-      <th>away_player_Y5</th>
-      <th>away_player_Y6</th>
-      <th>away_player_Y7</th>
-      <th>away_player_Y8</th>
-      <th>away_player_Y9</th>
-      <th>away_player_Y10</th>
-      <th>away_player_Y11</th>
-      <th>home_player_1</th>
-      <th>home_player_2</th>
-      <th>home_player_3</th>
-      <th>home_player_4</th>
-      <th>home_player_5</th>
-      <th>home_player_6</th>
-      <th>home_player_7</th>
-      <th>home_player_8</th>
-      <th>home_player_9</th>
-      <th>home_player_10</th>
-      <th>home_player_11</th>
-      <th>away_player_1</th>
-      <th>away_player_2</th>
-      <th>away_player_3</th>
-      <th>away_player_4</th>
-      <th>away_player_5</th>
-      <th>away_player_6</th>
-      <th>away_player_7</th>
-      <th>away_player_8</th>
-      <th>away_player_9</th>
-      <th>away_player_10</th>
-      <th>away_player_11</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>2125</th>
-      <td>2009/2010</td>
-      <td>658706</td>
-      <td>8667</td>
-      <td>8462</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>10.0</td>
-      <td>10.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>10.0</td>
-      <td>10.0</td>
-      <td>23021.0</td>
-      <td>40132.0</td>
-      <td>24509.0</td>
-      <td>26066.0</td>
-      <td>23022.0</td>
-      <td>32577.0</td>
-      <td>34437.0</td>
-      <td>23333.0</td>
-      <td>23225.0</td>
-      <td>39073.0</td>
-      <td>37798.0</td>
-      <td>36286.0</td>
-      <td>24137.0</td>
-      <td>47418.0</td>
-      <td>26108.0</td>
-      <td>23939.0</td>
-      <td>25421.0</td>
-      <td>40004.0</td>
-      <td>23889.0</td>
-      <td>27335.0</td>
-      <td>38704.0</td>
-      <td>30901.0</td>
-    </tr>
-    <tr>
-      <th>2183</th>
-      <td>2009/2010</td>
-      <td>658824</td>
-      <td>8667</td>
-      <td>8655</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>5.0</td>
-      <td>5.0</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>9.0</td>
-      <td>11.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>10.0</td>
-      <td>10.0</td>
-      <td>23021.0</td>
-      <td>40132.0</td>
-      <td>26066.0</td>
-      <td>24509.0</td>
-      <td>23022.0</td>
-      <td>23438.0</td>
-      <td>30595.0</td>
-      <td>34437.0</td>
-      <td>23225.0</td>
-      <td>39073.0</td>
-      <td>23034.0</td>
-      <td>30622.0</td>
-      <td>38836.0</td>
-      <td>19020.0</td>
-      <td>23921.0</td>
-      <td>30739.0</td>
-      <td>30842.0</td>
-      <td>109621.0</td>
-      <td>30849.0</td>
-      <td>113465.0</td>
-      <td>34947.0</td>
-      <td>49825.0</td>
-    </tr>
-    <tr>
-      <th>2213</th>
-      <td>2009/2010</td>
-      <td>658921</td>
-      <td>8667</td>
-      <td>10260</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>10.0</td>
-      <td>10.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>10.0</td>
-      <td>10.0</td>
-      <td>23021.0</td>
-      <td>32577.0</td>
-      <td>24509.0</td>
-      <td>26066.0</td>
-      <td>23022.0</td>
-      <td>23438.0</td>
-      <td>30595.0</td>
-      <td>23333.0</td>
-      <td>23225.0</td>
-      <td>70297.0</td>
-      <td>23034.0</td>
-      <td>35906.0</td>
-      <td>38994.0</td>
-      <td>30865.0</td>
-      <td>30362.0</td>
-      <td>32569.0</td>
-      <td>35327.0</td>
-      <td>34944.0</td>
-      <td>24148.0</td>
-      <td>24154.0</td>
-      <td>27430.0</td>
-      <td>30829.0</td>
-    </tr>
-    <tr>
-      <th>2223</th>
-      <td>2009/2010</td>
-      <td>658588</td>
-      <td>8667</td>
-      <td>8586</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>10.0</td>
-      <td>10.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>10.0</td>
-      <td>10.0</td>
-      <td>23021.0</td>
-      <td>93458.0</td>
-      <td>34275.0</td>
-      <td>24509.0</td>
-      <td>23022.0</td>
-      <td>32577.0</td>
-      <td>30595.0</td>
-      <td>23333.0</td>
-      <td>23225.0</td>
-      <td>23563.0</td>
-      <td>26143.0</td>
-      <td>30455.0</td>
-      <td>32870.0</td>
-      <td>46403.0</td>
-      <td>26209.0</td>
-      <td>40006.0</td>
-      <td>30895.0</td>
-      <td>97988.0</td>
-      <td>24656.0</td>
-      <td>31097.0</td>
-      <td>24635.0</td>
-      <td>30348.0</td>
-    </tr>
-    <tr>
-      <th>2242</th>
-      <td>2009/2010</td>
-      <td>658940</td>
-      <td>8667</td>
-      <td>8455</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>10.0</td>
-      <td>10.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>10.0</td>
-      <td>10.0</td>
-      <td>23021.0</td>
-      <td>40132.0</td>
-      <td>24509.0</td>
-      <td>93458.0</td>
-      <td>23022.0</td>
-      <td>23034.0</td>
-      <td>30595.0</td>
-      <td>182962.0</td>
-      <td>23225.0</td>
-      <td>70297.0</td>
-      <td>37798.0</td>
-      <td>30859.0</td>
-      <td>31306.0</td>
-      <td>30911.0</td>
-      <td>30627.0</td>
-      <td>40825.0</td>
-      <td>30699.0</td>
-      <td>30686.0</td>
-      <td>30631.0</td>
-      <td>30679.0</td>
-      <td>30822.0</td>
-      <td>37804.0</td>
-    </tr>
-    <tr>
-      <th>2273</th>
-      <td>2009/2010</td>
-      <td>658971</td>
-      <td>8667</td>
-      <td>8602</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>5.0</td>
-      <td>7.0</td>
-      <td>9.0</td>
-      <td>5.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>10.0</td>
-      <td>10.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>11.0</td>
-      <td>23021.0</td>
-      <td>40132.0</td>
-      <td>93458.0</td>
-      <td>24509.0</td>
-      <td>23022.0</td>
-      <td>32577.0</td>
-      <td>30595.0</td>
-      <td>182962.0</td>
-      <td>23225.0</td>
-      <td>37798.0</td>
-      <td>70297.0</td>
-      <td>30669.0</td>
-      <td>40022.0</td>
-      <td>32581.0</td>
-      <td>23334.0</td>
-      <td>33138.0</td>
-      <td>23099.0</td>
-      <td>35466.0</td>
-      <td>29673.0</td>
-      <td>25415.0</td>
-      <td>23538.0</td>
-      <td>23291.0</td>
-    </tr>
-    <tr>
-      <th>2285</th>
-      <td>2009/2010</td>
-      <td>659065</td>
-      <td>8667</td>
-      <td>8456</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>10.0</td>
-      <td>10.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>10.0</td>
-      <td>10.0</td>
-      <td>23021.0</td>
-      <td>40132.0</td>
-      <td>24509.0</td>
-      <td>93458.0</td>
-      <td>23022.0</td>
-      <td>23034.0</td>
-      <td>30595.0</td>
-      <td>182962.0</td>
-      <td>23225.0</td>
-      <td>70297.0</td>
-      <td>37798.0</td>
-      <td>24224.0</td>
-      <td>30509.0</td>
-      <td>30831.0</td>
-      <td>191616.0</td>
-      <td>30635.0</td>
-      <td>24213.0</td>
-      <td>30598.0</td>
-      <td>23782.0</td>
-      <td>33781.0</td>
-      <td>38817.0</td>
-      <td>30960.0</td>
-    </tr>
-    <tr>
-      <th>2335</th>
-      <td>2009/2010</td>
-      <td>658600</td>
-      <td>8667</td>
-      <td>8559</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>5.0</td>
-      <td>7.0</td>
-      <td>9.0</td>
-      <td>5.0</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>5.0</td>
-      <td>7.0</td>
-      <td>9.0</td>
-      <td>5.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>11.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>11.0</td>
-      <td>23021.0</td>
-      <td>26066.0</td>
-      <td>34275.0</td>
-      <td>24509.0</td>
-      <td>23022.0</td>
-      <td>97489.0</td>
-      <td>23333.0</td>
-      <td>39073.0</td>
-      <td>38816.0</td>
-      <td>23225.0</td>
-      <td>23563.0</td>
-      <td>23932.0</td>
-      <td>34430.0</td>
-      <td>23783.0</td>
-      <td>40128.0</td>
-      <td>24728.0</td>
-      <td>23934.0</td>
-      <td>155384.0</td>
-      <td>35532.0</td>
-      <td>24653.0</td>
-      <td>24372.0</td>
-      <td>34261.0</td>
-    </tr>
-    <tr>
-      <th>2343</th>
-      <td>2009/2010</td>
-      <td>659113</td>
-      <td>8667</td>
-      <td>9825</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>10.0</td>
-      <td>10.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>10.0</td>
-      <td>10.0</td>
-      <td>23021.0</td>
-      <td>32577.0</td>
-      <td>26066.0</td>
-      <td>93458.0</td>
-      <td>23022.0</td>
-      <td>23034.0</td>
-      <td>30595.0</td>
-      <td>24843.0</td>
-      <td>34437.0</td>
-      <td>37798.0</td>
-      <td>70297.0</td>
-      <td>23686.0</td>
-      <td>26111.0</td>
-      <td>34418.0</td>
-      <td>26005.0</td>
-      <td>31291.0</td>
-      <td>30935.0</td>
-      <td>39297.0</td>
-      <td>27277.0</td>
-      <td>26181.0</td>
-      <td>36410.0</td>
-      <td>3520.0</td>
-    </tr>
-    <tr>
-      <th>2364</th>
-      <td>2009/2010</td>
-      <td>659135</td>
-      <td>8667</td>
-      <td>9879</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>5.0</td>
-      <td>5.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>10.0</td>
-      <td>10.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>9.0</td>
-      <td>11.0</td>
-      <td>23021.0</td>
-      <td>40132.0</td>
-      <td>93458.0</td>
-      <td>23284.0</td>
-      <td>38816.0</td>
-      <td>23438.0</td>
-      <td>30595.0</td>
-      <td>24843.0</td>
-      <td>34437.0</td>
-      <td>23034.0</td>
-      <td>70297.0</td>
-      <td>30633.0</td>
-      <td>23282.0</td>
-      <td>26777.0</td>
-      <td>43247.0</td>
-      <td>24781.0</td>
-      <td>25015.0</td>
-      <td>165823.0</td>
-      <td>112035.0</td>
-      <td>24020.0</td>
-      <td>24737.0</td>
-      <td>30956.0</td>
-    </tr>
-    <tr>
-      <th>2384</th>
-      <td>2009/2010</td>
-      <td>659155</td>
-      <td>8667</td>
-      <td>8191</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>5.0</td>
-      <td>7.0</td>
-      <td>9.0</td>
-      <td>5.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>10.0</td>
-      <td>10.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>11.0</td>
-      <td>23021.0</td>
-      <td>40132.0</td>
-      <td>23284.0</td>
-      <td>93458.0</td>
-      <td>23022.0</td>
-      <td>32577.0</td>
-      <td>30595.0</td>
-      <td>24843.0</td>
-      <td>38816.0</td>
-      <td>23034.0</td>
-      <td>70297.0</td>
-      <td>24788.0</td>
-      <td>34230.0</td>
-      <td>43252.0</td>
-      <td>34214.0</td>
-      <td>23823.0</td>
-      <td>23370.0</td>
-      <td>23185.0</td>
-      <td>46008.0</td>
-      <td>11496.0</td>
-      <td>23190.0</td>
-      <td>32627.0</td>
-    </tr>
-    <tr>
-      <th>2455</th>
-      <td>2009/2010</td>
-      <td>658630</td>
-      <td>8667</td>
-      <td>8658</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>5.0</td>
-      <td>7.0</td>
-      <td>9.0</td>
-      <td>5.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>10.0</td>
-      <td>10.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>11.0</td>
-      <td>23021.0</td>
-      <td>40132.0</td>
-      <td>26066.0</td>
-      <td>23284.0</td>
-      <td>23022.0</td>
-      <td>39073.0</td>
-      <td>23333.0</td>
-      <td>34437.0</td>
-      <td>23225.0</td>
-      <td>37798.0</td>
-      <td>70297.0</td>
-      <td>31432.0</td>
-      <td>24226.0</td>
-      <td>34193.0</td>
-      <td>23837.0</td>
-      <td>24190.0</td>
-      <td>77704.0</td>
-      <td>24978.0</td>
-      <td>24655.0</td>
-      <td>33049.0</td>
-      <td>36802.0</td>
-      <td>31073.0</td>
-    </tr>
-    <tr>
-      <th>2475</th>
-      <td>2009/2010</td>
-      <td>658686</td>
-      <td>8667</td>
-      <td>8528</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>5.0</td>
-      <td>7.0</td>
-      <td>9.0</td>
-      <td>5.0</td>
-      <td>1.0</td>
-      <td>2.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>4.0</td>
-      <td>6.0</td>
-      <td>3.0</td>
-      <td>5.0</td>
-      <td>7.0</td>
-      <td>5.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>7.0</td>
-      <td>11.0</td>
-      <td>1.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>3.0</td>
-      <td>6.0</td>
-      <td>6.0</td>
-      <td>8.0</td>
-      <td>8.0</td>
-      <td>8.0</td>
-      <td>11.0</td>
-      <td>23021.0</td>
-      <td>40132.0</td>
-      <td>23284.0</td>
-      <td>38816.0</td>
-      <td>23022.0</td>
-      <td>26066.0</td>
-      <td>23025.0</td>
-      <td>34437.0</td>
-      <td>39073.0</td>
-      <td>23225.0</td>
-      <td>37798.0</td>
-      <td>34421.0</td>
-      <td>34987.0</td>
-      <td>35472.0</td>
-      <td>24230.0</td>
-      <td>111865.0</td>
-      <td>40015.0</td>
-      <td>129817.0</td>
-      <td>29581.0</td>
-      <td>25005.0</td>
-      <td>71550.0</td>
-      <td>30953.0</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
-
-
-```python
-season_dict = {}
-for s in epl_matches.season.sort_values().unique():
-    season_dict[s] = {}
-    df = (
-        epl_matches
-        .query("season == '{}'".format(s))
-        [['home_player_1','home_player_2', 'home_player_3', 'home_player_4', 'home_player_5', 'home_player_6', 
-          'home_player_7', 'home_player_8', 'home_player_9', 'home_player_10', 'home_player_11']]
-    )
-    
-    for col in 
-    for team_id in df.home_team_api_id.sort_values().unique():
-        
-        
-        
-        player_id_list = []
-        home_df = (
-            df
-            .query("home_team_api_id == {}".format(team_id))
-            [['home_player_1','home_player_2', 'home_player_3', 'home_player_4', 'home_player_5', 'home_player_6', 
-              'home_player_7', 'home_player_8', 'home_player_9', 'home_player_10', 'home_player_11']]
-        )
-        for col in home_df.columns:
-            for player_id in home_df[col]:
-                player_id_list.append(int(player_id))
-    
-        away_df = (
-            df
-            .query("away_team_api_id == {}".format(team_id))
-            [['away_player_1', 'away_player_2', 'away_player_3', 'away_player_4', 'away_player_5', 'away_player_6', 
-              'away_player_7', 'away_player_8', 'away_player_9', 'away_player_10', 'away_player_11']]
-        )
-        for col in away_df.columns:
-            for player_id in away_df[col]:
-                player_id_list.append(int(player_id))
-        player_id_list = list(set(player_id_list))
-        season_dict[s][team_id] = player_id_list
-```
-
-
-```python
-season_dict = {}
-for s in epl_matches.season.sort_values().unique():
-    season_dict[s] = {}
-    df = epl_matches.query("season == '{}'".format(s))
-    for team_id in df.home_team_api_id.sort_values().unique():
-        player_id_list = []
-        home_df = (
-            df
-            .query("home_team_api_id == {}".format(team_id))
-            [['home_player_1','home_player_2', 'home_player_3', 'home_player_4', 'home_player_5', 'home_player_6', 
-              'home_player_7', 'home_player_8', 'home_player_9', 'home_player_10', 'home_player_11']]
-        )
-        for col in home_df.columns:
-            for player_id in home_df[col]:
-                player_id_list.append(int(player_id))
-    
-        away_df = (
-            df
-            .query("away_team_api_id == {}".format(team_id))
-            [['away_player_1', 'away_player_2', 'away_player_3', 'away_player_4', 'away_player_5', 'away_player_6', 
-              'away_player_7', 'away_player_8', 'away_player_9', 'away_player_10', 'away_player_11']]
-        )
-        for col in away_df.columns:
-            for player_id in away_df[col]:
-                player_id_list.append(int(player_id))
-        player_id_list = list(set(player_id_list))
-        season_dict[s][team_id] = player_id_list
-```
-
-
-```python
-team_attributes_2.head(2)
-```
-
-
-
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>team_api_id</th>
-      <th>buildUpPlaySpeed</th>
-      <th>buildUpPlaySpeedClass</th>
-      <th>buildUpPlayDribbling</th>
-      <th>buildUpPlayDribblingClass</th>
-      <th>buildUpPlayPassing</th>
-      <th>buildUpPlayPassingClass</th>
-      <th>buildUpPlayPositioningClass</th>
-      <th>chanceCreationPassing</th>
-      <th>chanceCreationPassingClass</th>
-      <th>chanceCreationCrossing</th>
-      <th>chanceCreationCrossingClass</th>
-      <th>chanceCreationShooting</th>
-      <th>chanceCreationShootingClass</th>
-      <th>chanceCreationPositioningClass</th>
-      <th>defencePressure</th>
-      <th>defencePressureClass</th>
-      <th>defenceAggression</th>
-      <th>defenceAggressionClass</th>
-      <th>defenceTeamWidth</th>
-      <th>defenceTeamWidthClass</th>
-      <th>defenceDefenderLineClass</th>
-      <th>team_long_name</th>
-      <th>team_short_name</th>
-      <th>league_name</th>
-      <th>season</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>9825</td>
-      <td>66</td>
-      <td>Balanced</td>
-      <td>NaN</td>
-      <td>Little</td>
-      <td>30</td>
-      <td>Short</td>
-      <td>Free Form</td>
-      <td>30</td>
-      <td>Safe</td>
-      <td>45</td>
-      <td>Normal</td>
-      <td>35</td>
-      <td>Normal</td>
-      <td>Free Form</td>
-      <td>30</td>
-      <td>Deep</td>
-      <td>40</td>
-      <td>Press</td>
-      <td>50</td>
-      <td>Normal</td>
-      <td>Cover</td>
-      <td>Arsenal</td>
-      <td>ARS</td>
-      <td>England Premier League</td>
-      <td>2009/2010</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>9825</td>
-      <td>75</td>
-      <td>Fast</td>
-      <td>NaN</td>
-      <td>Little</td>
-      <td>40</td>
-      <td>Mixed</td>
-      <td>Free Form</td>
-      <td>40</td>
-      <td>Normal</td>
-      <td>45</td>
-      <td>Normal</td>
-      <td>65</td>
-      <td>Normal</td>
-      <td>Free Form</td>
-      <td>50</td>
-      <td>Medium</td>
-      <td>40</td>
-      <td>Press</td>
-      <td>45</td>
-      <td>Normal</td>
-      <td>Cover</td>
-      <td>Arsenal</td>
-      <td>ARS</td>
-      <td>England Premier League</td>
-      <td>2010/2011</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
-
-
-```python
-player_attributes_2.head(2)
-```
-
-
-
-
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>player_api_id</th>
-      <th>season</th>
       <th>overall_rating</th>
       <th>potential</th>
       <th>crossing</th>
@@ -2378,97 +889,98 @@ player_attributes_2.head(2)
       <th>gk_kicking</th>
       <th>gk_positioning</th>
       <th>gk_reflexes</th>
-      <th>height</th>
-      <th>weight</th>
-      <th>age</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <th>0</th>
-      <td>2625</td>
-      <td>2006/2007</td>
-      <td>63.0</td>
-      <td>64.0</td>
-      <td>48.0</td>
-      <td>48.0</td>
-      <td>47.0</td>
-      <td>64.0</td>
-      <td>38.0</td>
-      <td>57.0</td>
-      <td>50.0</td>
-      <td>46.0</td>
+      <th>53</th>
+      <td>England Premier League</td>
+      <td>2802</td>
+      <td>2013/2014</td>
+      <td>10003</td>
+      <td>28.571429</td>
+      <td>172.72</td>
+      <td>159.0</td>
+      <td>76.0</td>
+      <td>76.857143</td>
+      <td>76.285714</td>
+      <td>71.0</td>
+      <td>53.0</td>
+      <td>68.857143</td>
+      <td>65.0</td>
+      <td>85.0</td>
+      <td>83.0</td>
+      <td>77.0</td>
+      <td>69.0</td>
+      <td>81.0</td>
+      <td>80.142857</td>
+      <td>77.571429</td>
+      <td>84.0</td>
+      <td>69.0</td>
+      <td>80.714286</td>
+      <td>76.0</td>
       <td>67.0</td>
-      <td>57.0</td>
-      <td>67.0</td>
-      <td>64.0</td>
       <td>59.0</td>
-      <td>52.0</td>
+      <td>51.0</td>
+      <td>77.0</td>
+      <td>54.0</td>
       <td>49.0</td>
-      <td>61.0</td>
-      <td>56.0</td>
-      <td>78.0</td>
-      <td>56.0</td>
-      <td>59.0</td>
+      <td>73.0</td>
+      <td>73.142857</td>
       <td>72.0</td>
-      <td>52.0</td>
-      <td>55.0</td>
-      <td>56.0</td>
-      <td>46.0</td>
-      <td>64.0</td>
-      <td>66.0</td>
-      <td>63.0</td>
-      <td>14.0</td>
-      <td>11.0</td>
-      <td>67.0</td>
+      <td>42.0</td>
+      <td>47.0</td>
+      <td>36.0</td>
+      <td>13.0</td>
+      <td>16.0</td>
       <td>9.0</td>
-      <td>10.0</td>
-      <td>175.26</td>
-      <td>154.0</td>
-      <td>26.0</td>
+      <td>9.0</td>
+      <td>7.0</td>
     </tr>
     <tr>
-      <th>1</th>
-      <td>2625</td>
-      <td>2007/2008</td>
-      <td>63.0</td>
-      <td>64.0</td>
-      <td>48.0</td>
-      <td>48.0</td>
-      <td>47.0</td>
-      <td>64.0</td>
-      <td>38.0</td>
-      <td>57.0</td>
-      <td>50.0</td>
-      <td>51.0</td>
-      <td>67.0</td>
-      <td>57.0</td>
-      <td>67.0</td>
-      <td>64.0</td>
-      <td>59.0</td>
-      <td>52.0</td>
-      <td>49.0</td>
-      <td>61.0</td>
-      <td>56.0</td>
-      <td>78.0</td>
-      <td>56.0</td>
-      <td>59.0</td>
-      <td>72.0</td>
-      <td>52.0</td>
-      <td>55.0</td>
-      <td>56.0</td>
-      <td>46.0</td>
-      <td>64.0</td>
-      <td>66.0</td>
-      <td>63.0</td>
-      <td>14.0</td>
-      <td>24.0</td>
-      <td>67.0</td>
-      <td>24.0</td>
-      <td>24.0</td>
-      <td>175.26</td>
+      <th>183</th>
+      <td>England Premier League</td>
+      <td>3520</td>
+      <td>2009/2010</td>
+      <td>9825</td>
+      <td>28.500000</td>
+      <td>172.72</td>
       <td>154.0</td>
-      <td>26.0</td>
+      <td>85.0</td>
+      <td>90.500000</td>
+      <td>85.000000</td>
+      <td>88.0</td>
+      <td>50.0</td>
+      <td>90.000000</td>
+      <td>77.0</td>
+      <td>93.0</td>
+      <td>77.0</td>
+      <td>76.0</td>
+      <td>80.0</td>
+      <td>91.0</td>
+      <td>88.000000</td>
+      <td>87.000000</td>
+      <td>86.0</td>
+      <td>85.0</td>
+      <td>75.000000</td>
+      <td>84.0</td>
+      <td>58.0</td>
+      <td>76.0</td>
+      <td>67.0</td>
+      <td>85.0</td>
+      <td>49.0</td>
+      <td>75.0</td>
+      <td>86.0</td>
+      <td>85.000000</td>
+      <td>88.0</td>
+      <td>22.0</td>
+      <td>29.0</td>
+      <td>28.0</td>
+      <td>7.0</td>
+      <td>24.0</td>
+      <td>80.0</td>
+      <td>24.0</td>
+      <td>24.0</td>
     </tr>
   </tbody>
 </table>
@@ -2478,23 +990,133 @@ player_attributes_2.head(2)
 
 
 ```python
-
+player_position.columns
 ```
+
+
+
+
+    Index(['playerID', 'CAM', 'CB', 'CDM', 'CF', 'CM', 'GK', 'LB', 'LF', 'LM',
+           'LW', 'LWB', 'RB', 'RF', 'RM', 'RW', 'RWB', 'ST', 'SW'],
+          dtype='object')
+
+
 
 
 ```python
-
+player_position.query("playerID == 2802")
 ```
+
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>playerID</th>
+      <th>CAM</th>
+      <th>CB</th>
+      <th>CDM</th>
+      <th>CF</th>
+      <th>CM</th>
+      <th>GK</th>
+      <th>LB</th>
+      <th>LF</th>
+      <th>LM</th>
+      <th>LW</th>
+      <th>LWB</th>
+      <th>RB</th>
+      <th>RF</th>
+      <th>RM</th>
+      <th>RW</th>
+      <th>RWB</th>
+      <th>ST</th>
+      <th>SW</th>
+    </tr>
+  </thead>
+  <tbody>
+  </tbody>
+</table>
+</div>
+
+
 
 
 ```python
-
+player.head(2)
 ```
 
 
-```python
 
-```
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>id</th>
+      <th>player_api_id</th>
+      <th>player_name</th>
+      <th>player_fifa_api_id</th>
+      <th>birthday</th>
+      <th>height</th>
+      <th>weight</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>505942</td>
+      <td>Aaron Appindangoye</td>
+      <td>218353</td>
+      <td>1992-02-29 00:00:00</td>
+      <td>182.88</td>
+      <td>187</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>155782</td>
+      <td>Aaron Cresswell</td>
+      <td>189615</td>
+      <td>1989-12-15 00:00:00</td>
+      <td>170.18</td>
+      <td>146</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
 
 
 ```python

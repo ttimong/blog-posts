@@ -14,7 +14,6 @@ pd.set_option('display.max_colwidth', -1)
 
 
 sqlite_file = 'database.sqlite'    # name of the sqlite database file
-
 # table names
 # country
 # league
@@ -38,6 +37,7 @@ player = pd.read_sql_query("select * from player", conn)
 player_attributes = pd.read_sql_query("select * from player_attributes", conn)
 team_attributes = pd.read_sql_query("select * from team_attributes", conn)
 team = pd.read_sql_query("select * from team", conn)
+player_position = pd.read_csv('./players_position.csv')
 
 
 
@@ -114,10 +114,6 @@ player_attributes_2.head(2)
 
 
 
-league
-
-
-
 match_selected_columns=[
     'season', 'match_api_id', 'home_team_api_id', 'away_team_api_id',
     'home_player_X1', 'home_player_X2', 'home_player_X3', 'home_player_X4', 'home_player_X5', 'home_player_X6', 'home_player_X7', 'home_player_X8', 
@@ -149,171 +145,114 @@ epl_matches.head(2)
 
 
 
+home_player_cols= ['home_player_1','home_player_2', 'home_player_3', 'home_player_4', 'home_player_5', 'home_player_6', 
+                    'home_player_7', 'home_player_8', 'home_player_9', 'home_player_10', 'home_player_11']
+away_player_cols = ['away_player_1', 'away_player_2', 'away_player_3', 'away_player_4', 'away_player_5', 'away_player_6', 
+                    'away_player_7', 'away_player_8', 'away_player_9', 'away_player_10', 'away_player_11']
+
+
+
+def get_team(df, min_max='min', home_away_id='home_team_api_id'):
+    final_df = (
+        df
+        [['season', '{}'.format(col), '{}'.format(home_away_id)]]
+        .drop_duplicates()
+        .groupby(["season", "{}".format(col)])
+        .agg({"{}".format(home_away_id): "min"})
+        .reset_index()
+        .rename(columns={"{}".format(col): "player_api_id", "{}".format(home_away_id): "team_api_id"})
+    )
+    return final_df
+
+
+
 first = True
-for col in ['home_player_1','home_player_2', 'home_player_3', 'home_player_4', 'home_player_5', 'home_player_6', 'home_player_7', 'home_player_8', 'home_player_9', 'home_player_10', 'home_player_11']:
+for col in home_player_cols:
     if first is True:
-        first_team = (
-            epl_matches
-            [['season', '{}'.format(col), 'home_team_api_id']]
-            .drop_duplicates()
-            .groupby(["season", "{}".format(col)])
-            .agg({"home_team_api_id": "min"})
-            .reset_index()
-            .sort_values('home_team_api_id', ascending=False)
-            .rename(columns={"{}".format(col): "player_id", "home_team_api_id": "team_api_id"})
-        )
-
-        second_team = (
-            epl_matches
-            [['season', '{}'.format(col), 'home_team_api_id']]
-            .drop_duplicates()
-            .groupby(["season", '{}'.format(col)])
-            .agg({"home_team_api_id": "max"})
-            .reset_index()
-            .sort_values('home_team_api_id', ascending=False)
-            .rename(columns={'{}'.format(col): "player_id", "home_team_api_id": "team_api_id"})
-        )
+        first_df = get_team(epl_matches, min_max='min', home_away_id='home_team_api_id')
+        second_df = get_team(epl_matches, min_max='max', home_away_id='home_team_api_id')
         home_final = pd.concat([first_team, second_team], axis=0)
+        first = False
     else:
-        first_team = (
-            epl_matches
-            [['season', '{}'.format(col), 'home_team_api_id']]
-            .drop_duplicates()
-            .groupby(["season", '{}'.format(col)])
-            .agg({"home_team_api_id": "min"})
-            .reset_index()
-            .sort_values('home_team_api_id', ascending=False)
-            .rename(columns={'{}'.format(col): "player_id", "home_team_api_id": "team_api_id"})
-        )
-
-        second_team = (
-            epl_matches
-            [['season', '{}'.format(col), 'home_team_api_id']]
-            .drop_duplicates()
-            .groupby(["season", '{}'.format(col)])
-            .agg({"home_team_api_id": "max"})
-            .reset_index()
-            .sort_values('home_team_api_id', ascending=False)
-            .rename(columns={'{}'.format(col): "player_id", "home_team_api_id": "team_api_id"})
-        )
+        first_team = get_team(epl_matches, min_max='min', home_away_id='home_team_api_id')
+        second_team = get_team(epl_matches, min_max='max', home_away_id='home_team_api_id')
         home_intermediate = pd.concat([first_team, second_team], axis=0)
         home_final = pd.concat([home_intermediate, home_final], axis=0)
-
-final.drop_duplicates(inplace=True)
-
-
-
-final.query("player_id == 46518 and season == '2009/2010'")
-
-
-
-match.query("season == '2009/2010' and home_player_1 == 46518")[['season', 'home_team_api_id', 'date']]
-
-
-
-player.query("player_api_id == 46518")
-
-
-
-team.query("team_api_id in (8462, 10194)")
-
-
-
-epl_matches.query("home_player_1==23021 and season == '2009/2010'")
-
-
-
-season_dict = {}
-for s in epl_matches.season.sort_values().unique():
-    season_dict[s] = {}
-    df = (
-        epl_matches
-        .query("season == '{}'".format(s))
-        [['home_player_1','home_player_2', 'home_player_3', 'home_player_4', 'home_player_5', 'home_player_6', 
-          'home_player_7', 'home_player_8', 'home_player_9', 'home_player_10', 'home_player_11']]
-    )
-    
-    for col in 
-    for team_id in df.home_team_api_id.sort_values().unique():
         
+home_final = (
+    home_final
+    .drop_duplicates()
+    .query("player_api_id != 0")
+    .reset_index(drop=True)
+)
+
+
+
+first = True
+for col in away_player_cols:
+    if first is True:
+        first_df = get_team(epl_matches, min_max='min', home_away_id='away_team_api_id')
+        second_df = get_team(epl_matches, min_max='max', home_away_id='away_team_api_id')
+        away_final = pd.concat([first_team, second_team], axis=0)
+        first = False
+    else:
+        first_team = get_team(epl_matches, min_max='min', home_away_id='away_team_api_id')
+        second_team = get_team(epl_matches, min_max='max', home_away_id='away_team_api_id')
+        away_intermediate = pd.concat([first_team, second_team], axis=0)
+        away_final = pd.concat([away_intermediate, away_final], axis=0)
         
-        
-        player_id_list = []
-        home_df = (
-            df
-            .query("home_team_api_id == {}".format(team_id))
-            [['home_player_1','home_player_2', 'home_player_3', 'home_player_4', 'home_player_5', 'home_player_6', 
-              'home_player_7', 'home_player_8', 'home_player_9', 'home_player_10', 'home_player_11']]
-        )
-        for col in home_df.columns:
-            for player_id in home_df[col]:
-                player_id_list.append(int(player_id))
-    
-        away_df = (
-            df
-            .query("away_team_api_id == {}".format(team_id))
-            [['away_player_1', 'away_player_2', 'away_player_3', 'away_player_4', 'away_player_5', 'away_player_6', 
-              'away_player_7', 'away_player_8', 'away_player_9', 'away_player_10', 'away_player_11']]
-        )
-        for col in away_df.columns:
-            for player_id in away_df[col]:
-                player_id_list.append(int(player_id))
-        player_id_list = list(set(player_id_list))
-        season_dict[s][team_id] = player_id_list
+away_final = (
+    away_final
+    .drop_duplicates()
+    .query("player_api_id != 0")
+    .reset_index(drop=True)
+)
 
 
 
-season_dict = {}
-for s in epl_matches.season.sort_values().unique():
-    season_dict[s] = {}
-    df = epl_matches.query("season == '{}'".format(s))
-    for team_id in df.home_team_api_id.sort_values().unique():
-        player_id_list = []
-        home_df = (
-            df
-            .query("home_team_api_id == {}".format(team_id))
-            [['home_player_1','home_player_2', 'home_player_3', 'home_player_4', 'home_player_5', 'home_player_6', 
-              'home_player_7', 'home_player_8', 'home_player_9', 'home_player_10', 'home_player_11']]
-        )
-        for col in home_df.columns:
-            for player_id in home_df[col]:
-                player_id_list.append(int(player_id))
-    
-        away_df = (
-            df
-            .query("away_team_api_id == {}".format(team_id))
-            [['away_player_1', 'away_player_2', 'away_player_3', 'away_player_4', 'away_player_5', 'away_player_6', 
-              'away_player_7', 'away_player_8', 'away_player_9', 'away_player_10', 'away_player_11']]
-        )
-        for col in away_df.columns:
-            for player_id in away_df[col]:
-                player_id_list.append(int(player_id))
-        player_id_list = list(set(player_id_list))
-        season_dict[s][team_id] = player_id_list
+player_team = pd.concat([home_final, away_final], axis=0)
 
 
 
-team_attributes_2.head(2)
+player_team = (
+    player_team
+    .drop_duplicates()
+    .reset_index(drop=True)
+)
 
 
 
-player_attributes_2.head(2)
+player_team.query("player_api_id == 38836 and season == '2008/2009'")
 
 
 
+player_attributes_3 = (
+    player_attributes_2
+    .merge(player_team, on=['season', 'player_api_id'], how='left')
+    .merge(team_attributes_2[['team_api_id', 'season', 'league_name']], on=['team_api_id', 'season'], how='left')
+    .query("league_name == 'England Premier League'")
+    [['league_name', 'player_api_id', 'season', 'team_api_id', 'age', 'height', 'weight', 'overall_rating', 'potential', 
+      'crossing', 'finishing', 'heading_accuracy', 'short_passing', 'volleys', 'dribbling', 'curve', 'free_kick_accuracy', 'long_passing', 'ball_control',
+      'acceleration', 'sprint_speed', 'agility', 'reactions', 'balance', 'shot_power', 'jumping', 'stamina', 'strength', 'long_shots', 'aggression', 
+      'interceptions', 'positioning', 'vision', 'penalties', 'marking', 'standing_tackle', 'sliding_tackle', 
+      'gk_diving','gk_handling', 'gk_kicking', 'gk_positioning', 'gk_reflexes']]
+)
 
 
 
+player_attributes_3.head(2)
 
 
 
+player_position.columns
 
 
 
+player_position.query("playerID == 2802")
 
 
 
-
+player.head(2)
 
 
 
